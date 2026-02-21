@@ -1,10 +1,12 @@
 import streamlit as st
-from utils.database import get_week_data, init_database
-from utils.charts import create_energy_trend, create_task_energy_comparison, create_mood_matrix
-from utils.pattern_detector import detect_patterns
+from datetime import datetime, timedelta
+from utils.database import (get_week_data, init_database, get_current_week_range,
+                           save_weekly_history, is_new_week, get_weekly_history, save_improvement_note)
 from utils.auth import check_authentication
 from utils.ui_components import apply_gradient_theme, show_fox_header
+from utils.charts import create_energy_trend, create_task_energy_comparison, create_mood_matrix
 import json
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Tổng kết tuần",
@@ -12,9 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ===== THÊM GRADIENT THEME =====
 apply_gradient_theme()
-# ================================
 
 if not check_authentication():
     st.warning("⚠️ Vui lòng đăng nhập trước!")
@@ -23,110 +23,208 @@ if not check_authentication():
 username = st.session_state.username
 init_database(username)
 
-# ===== FOX HEADER =====
 show_fox_header("📊 Tổng kết tuần")
-# ======================
 
+week_start, week_end = get_current_week_range()
+st.markdown(f"**Tuần:** {week_start} đến {week_end}")
+
+# KIỂM TRA TUẦN MỚI
+if is_new_week(username):
+    st.warning("🎉 ĐÃ HẾT TUẦN! Hãy lưu tuần trước.")
+    
+    last_monday = datetime.strptime(week_start, "%Y-%m-%d") - timedelta(days=7)
+    last_sunday = last_monday + timedelta(days=6)
+    
+    st.info(f"Tuần trước: {last_monday.strftime('%Y-%m-%d')} - {last_sunday.strftime('%Y-%m-%d')}")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📂 Lưu tuần cũ", type="primary", use_container_width=True):
+            df_last = get_week_data(username)
+            if len(df_last) > 0:
+                save_weekly_history(
+                    username,
+                    last_monday.strftime('%Y-%m-%d'),
+                    last_sunday.strftime('%Y-%m-%d'),
+                    df_last
+                )
+                st.success("✅ Đã lưu!")
+                st.balloons()
+                st.rerun()
+            else:
+                st.warning("⚠️ Không có dữ liệu!")
+    with col2:
+        if st.button("📚 Xem lịch sử", use_container_width=True):
+            st.session_state.show_history = True
+
+# LỊCH SỬ
+if st.session_state.get('show_history', False):
+    with st.expander("📂 Lịch sử 8 tuần", expanded=True):
+        history_df = get_weekly_history(username, 8)
+        if len(history_df) > 0:
+            for idx, row in history_df.iterrows():
+                col_a, col_b, col_c = st.columns([2, 1, 1])
+                with col_a:
+                    st.markdown(f"**{row['week_start']} - {row['week_end']}**")
+                with col_b:
+                    st.metric("Check-in", f"{row['total_checkins']}/7")
+                with col_c:
+                    st.metric("Năng lượng", f"{row['avg_energy']:.1f}/10")
+                st.markdown("---")
+        else:
+            st.info("Chưa có lịch sử!")
+        if st.button("❌ Đóng"):
+            st.session_state.show_history = False
+            st.rerun()
+
+st.markdown("---")
+
+# LẤY DATA
 df = get_week_data(username)
+days_tracked = len(df)
 
-if len(df) == 0:
-    st.info("Bạn chưa có dữ liệu nào. Hãy bắt đầu check-in hàng ngày!")
+st.markdown(f"### Check-in: **{days_tracked}/7 ngày** {'✅' if days_tracked >= 6 else '💪'}")
+
+if days_tracked < 3:
+    st.warning(f"⚠️ Cần 3 ngày để phân tích. Hiện có {days_tracked}/3 ngày.")
+    if st.button("📝 Check-in ngay", type="primary"):
+        st.switch_page("pages/1_📝_Nhập_Liệu_Hàng_Ngày.py")
     st.stop()
 
-if len(df) < 6:
-    st.warning(f"⚠️ Bạn mới check-in {len(df)}/7 ngày. Cần ít nhất 6 ngày để phân tích đầy đủ!")
+st.success(f"✅ Đủ dữ liệu! ({days_tracked} ngày)")
 
-st.success(f"✅ Bạn đã check-in {len(df)} ngày trong tuần này!")
+# METRICS
+avg_energy = df['energy_level'].mean()
+df['task_count'] = df['tasks'].apply(lambda x: len(json.loads(x)))
+avg_tasks = df['task_count'].mean()
 
-st.markdown("---")
-
-st.subheader("📈 Biểu đồ phân tích")
-
-tab1, tab2, tab3 = st.tabs(["Xu hướng năng lượng", "Công việc vs Năng lượng", "Ma trận tâm trạng"])
-
-with tab1:
-    fig1 = create_energy_trend(df)
-    st.plotly_chart(fig1, width="stretch")
-
-with tab2:
-    fig2 = create_task_energy_comparison(df)
-    st.plotly_chart(fig2, width="stretch")
-
-with tab3:
-    fig3 = create_mood_matrix(df)
-    st.plotly_chart(fig3, width="stretch")
-
-st.markdown("---")
-
-st.subheader("🔍 Patterns phát hiện được")
-
-patterns = detect_patterns(df)
-
-for pattern in patterns:
-    if "⚠️" in pattern or "📋" in pattern or "😴" in pattern or "🔋" in pattern:
-        st.warning(pattern)
-    else:
-        st.success(pattern)
-
-st.markdown("---")
-
-st.subheader("📊 Thống kê tổng quan")
-
-col1, col2, col3, col4 = st.columns(4)
-
+col1, col2, col3 = st.columns(3)
 with col1:
-    avg_energy = df['energy_level'].mean()
     st.metric("Năng lượng TB", f"{avg_energy:.1f}/10")
-
 with col2:
-    avg_sleep = df['sleep_quality'].mean()
-    st.metric("Giấc ngủ TB", f"{'⭐' * int(avg_sleep)}")
-
+    st.metric("Công việc TB", f"{avg_tasks:.1f} việc/ngày")
 with col3:
-    total_tasks = sum(df['tasks'].apply(lambda x: len(json.loads(x))))
-    st.metric("Tổng công việc", total_tasks)
+    best_day = df.loc[df['energy_level'].idxmax()]
+    st.metric("Ngày tốt nhất", best_day['date'])
 
-with col4:
-    heavy_days = len(df[df['mental_load'].isin(['Nặng', 'Cực nặng'])])
-    st.metric("Ngày áp lực cao", f"{heavy_days}/{len(df)}")
+st.markdown("---")
 
-# PHẦN AI PROMPT GENERATOR
-if len(df) >= 3:
-    st.markdown("---")
-    st.subheader("🤖 AI Prompt Generator")
-    
-    st.info("💡 Prompt này chứa toàn bộ context tuần của bạn, giúp AI đưa ra giải pháp CỤ THỂ")
-    
-    from utils.prompt_builder import build_weekly_prompt
-    
-    prompt = build_weekly_prompt(df, patterns)
-    
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        st.markdown("**Cách dùng:** Copy prompt bên dưới → Paste vào ChatGPT/Claude/Gemini")
-    
-    with col2:
-        if st.button("📋 Copy Prompt", width="stretch", type="primary"):
-            st.toast("✅ Đã copy! Paste vào AI assistant của bạn", icon="✅")
-    
-    st.code(prompt, language="markdown", line_numbers=True)
-    
-    with st.expander("ℹ️ Giải thích prompt này"):
-        st.markdown("""
-        **Prompt này chứa:**
-        1. 📊 Dữ liệu tổng quan (năng lượng TB, số công việc TB)
-        2. 📅 Chi tiết từng ngày trong tuần
-        3. 🔍 Patterns tự động phát hiện
-        4. 💥 Phân tích sâu ngày năng lượng sụp đổ (nếu có)
-        5. ❓ Câu hỏi cụ thể yêu cầu AI đưa ra 3 giải pháp vi mô
+# ── BIỂU ĐỒ PLOTLY — giống trang chủ ────────────────────────
+st.subheader("📈 Biểu đồ phân tích tuần")
+
+chart_tab1, chart_tab2, chart_tab3 = st.tabs([
+    "⚡ Xu hướng năng lượng",
+    "📋 Công việc vs Năng lượng",
+    "🎯 Ma trận áp lực"
+])
+
+with chart_tab1:
+    fig1 = create_energy_trend(df)
+    st.plotly_chart(fig1, use_container_width=True)
+
+with chart_tab2:
+    fig2 = create_task_energy_comparison(df)
+    st.plotly_chart(fig2, use_container_width=True)
+
+with chart_tab3:
+    fig3 = create_mood_matrix(df)
+    st.plotly_chart(fig3, use_container_width=True)
+# ─────────────────────────────────────────────────────────────
+
+st.markdown("---")
+
+# PATTERNS
+st.subheader("⚠️ Patterns phát hiện")
+
+patterns = []
+worst_day = df.loc[df['energy_level'].idxmin()]
+if worst_day['energy_level'] < 5:
+    patterns.append(f"⚠️ {worst_day['date']} là ngày thấp nhất ({worst_day['energy_level']}/10)")
+
+low_sleep = df[df['sleep_quality'] <= 2]
+if len(low_sleep) > 0:
+    patterns.append(f"😴 {len(low_sleep)} ngày ngủ kém → Ảnh hưởng năng lượng")
+
+high_tasks = df[df['task_count'] >= 8]
+if len(high_tasks) > 0:
+    patterns.append(f"📋 {len(high_tasks)} ngày quá nhiều việc (≥8 việc)")
+
+if len(patterns) > 0:
+    for p in patterns:
+        st.markdown(f"- {p}")
+else:
+    st.info("✅ Không có patterns tiêu cực!")
+
+st.markdown("---")
+
+# PROMPT TUẦN
+st.subheader("🤖 Prompt AI tuần")
+st.info(f"💡 Prompt tuần MẠNH HƠN prompt ngày vì có {days_tracked} ngày dữ liệu!")
+
+from utils.prompt_builder import build_weekly_prompt
+weekly_prompt = build_weekly_prompt(df, patterns)
+
+# Toggle xem prompt + Copy bằng JS
+if 'show_weekly_prompt' not in st.session_state:
+    st.session_state.show_weekly_prompt = False
+
+col_p1, col_p2 = st.columns(2)
+
+with col_p1:
+    btn_label = "🙈 Ẩn Prompt" if st.session_state.show_weekly_prompt else "👁️ Xem Prompt tuần"
+    if st.button(btn_label, use_container_width=True, type="primary", key="btn_weekly_toggle"):
+        st.session_state.show_weekly_prompt = not st.session_state.show_weekly_prompt
+        st.rerun()
+
+with col_p2:
+    prompt_json = json.dumps(weekly_prompt)
+    components.html(f"""
+    <button id="copyweeklybtn" onclick="
+        var text = {prompt_json};
+        navigator.clipboard.writeText(text).then(function() {{
+            document.getElementById('copyweeklybtn').innerText = '✅ Đã copy!';
+            setTimeout(function() {{
+                document.getElementById('copyweeklybtn').innerText = '📋 Copy Prompt tuần';
+            }}, 2000);
+        }}).catch(function() {{
+            document.getElementById('copyweeklybtn').innerText = '❌ Lỗi, thử lại';
+        }});
+    " style="
+        width:100%; padding:0.6rem 1rem;
+        background:linear-gradient(135deg,#667eea,#764ba2);
+        color:white; border:none; border-radius:10px;
+        font-size:1rem; font-weight:600; cursor:pointer;
+        font-family:sans-serif; line-height:1.6;
+    ">📋 Copy Prompt tuần</button>
+    """, height=50)
+
+if st.session_state.show_weekly_prompt:
+    st.code(weekly_prompt, language="markdown")
+
+st.markdown("---")
+
+# GHI CHÚ
+st.subheader("📝 Ghi chú cải thiện")
+
+with st.expander("Lưu lời khuyên cho tuần sau"):
+    with st.form("weekly_note"):
+        note_content = st.text_area(
+            "AI khuyên gì cho tuần sau?",
+            height=150,
+            placeholder="VD: Nên ngủ đủ 7 tiếng, giảm công việc xuống 5-6 việc/ngày..."
+        )
+        note_type = st.radio("Áp dụng:", ["Tuần sau", "Dài hạn", "Quy luật"], horizontal=True)
         
-        **AI sẽ trả về:**
-        - Nguyên nhân gốc rễ
-        - 3 hành động cụ thể có thể làm ngay tuần sau
-        - Không phải lời khuyên chung chung!
-        """)
+        if st.form_submit_button("💾 Lưu", use_container_width=True):
+            if note_content.strip():
+                next_week = (datetime.strptime(week_start, "%Y-%m-%d") + timedelta(days=7)).strftime("%Y-%m-%d")
+                if save_improvement_note(username, next_week, note_content, note_type):
+                    st.success("✅ Đã lưu!")
+                    st.balloons()
+                else:
+                    st.error("❌ Lỗi!")
+            else:
+                st.warning("⚠️ Nhập nội dung!")
 
-if len(df) >= 6:
-    st.markdown("---")
-    st.success("🎉 Bạn đã hoàn thành đủ dữ liệu tuần này!")
+st.markdown("---")
+st.caption("💡 Hãy áp dụng lời khuyên tuần sau để cải thiện!")
