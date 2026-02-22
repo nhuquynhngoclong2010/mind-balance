@@ -66,20 +66,6 @@ Hãy đưa ra giải pháp dựa trên XU HƯỚNG CỤ THỂ trong dữ liệu 
 def build_daily_framework_prompt_with_schedule(date, data, framework_name):
     """
     Tạo prompt hàng ngày kết hợp lịch cố định và framework khoa học.
-
-    Args:
-        date: str - Ngày (YYYY-MM-DD)
-        data: dict - {
-            'mental_load': str,
-            'energy_level': int,
-            'tasks': list[str],
-            'tasks_meta': list[dict],
-            'fixed_schedule': list[dict]
-        }
-        framework_name: str - Tên framework
-
-    Returns:
-        str - Prompt đầy đủ
     """
 
     tasks      = data.get('tasks', [])
@@ -87,8 +73,8 @@ def build_daily_framework_prompt_with_schedule(date, data, framework_name):
     fixed_schedule = data.get('fixed_schedule', [])
     energy     = data.get('energy_level', 5)
 
-    # Tính tổng thời gian công việc
-    total_minutes = sum(t.get('estimated_time', 0) for t in tasks_meta)
+    # Tính tổng thời gian công việc — dùng "or 0" để tránh None từ Supabase
+    total_minutes = sum((t.get('estimated_time') or 0) for t in tasks_meta)
     total_h = total_minutes // 60
     total_m = total_minutes % 60
 
@@ -96,8 +82,10 @@ def build_daily_framework_prompt_with_schedule(date, data, framework_name):
     busy_minutes = 0
     for s in fixed_schedule:
         try:
-            start = datetime.strptime(s['start_time'], "%H:%M")
-            end   = datetime.strptime(s['end_time'],   "%H:%M")
+            start_key = 'start_time' if 'start_time' in s else 'start'
+            end_key   = 'end_time'   if 'end_time'   in s else 'end'
+            start = datetime.strptime(s[start_key], "%H:%M")
+            end   = datetime.strptime(s[end_key],   "%H:%M")
             busy_minutes += int((end - start).total_seconds() / 60)
         except Exception:
             pass
@@ -278,8 +266,12 @@ Phương pháp hôm nay: **{framework['name']}**
     if fixed_schedule:
         prompt += "## 2. LỊCH CỐ ĐỊNH (KHÔNG THỂ THAY ĐỔI)\n"
         for s in fixed_schedule:
-            prompt += f"- {s['start_time']} - {s['end_time']}: {s['schedule_name']}\n"
-        free_est = max(0, 960 - busy_minutes)  # ước tính từ 6h-22h = 960 phút
+            # Hỗ trợ cả key từ SQLite (start/end) và Supabase (start_time/end_time)
+            start_key = 'start_time' if 'start_time' in s else 'start'
+            end_key   = 'end_time'   if 'end_time'   in s else 'end'
+            name_key  = 'schedule_name' if 'schedule_name' in s else 'name'
+            prompt += f"- {s[start_key]} - {s[end_key]}: {s[name_key]}\n"
+        free_est = max(0, 960 - busy_minutes)
         prompt += f"""
 **→ Tổng thời gian bận: khoảng {busy_minutes // 60} giờ {busy_minutes % 60} phút**
 **→ Thời gian rảnh ước tính còn lại trong ngày: khoảng {free_est // 60} giờ {free_est % 60} phút**
@@ -293,9 +285,9 @@ Phương pháp hôm nay: **{framework['name']}**
     prompt += f"## 3. CÔNG VIỆC CẦN LÀM (Tổng: {total_h} giờ {total_m} phút)\n"
     if tasks_meta:
         for i, t in enumerate(tasks_meta, 1):
-            phut = t.get('estimated_time', 0)
+            phut = t.get('estimated_time') or 0
             tg = f"{phut // 60} giờ {phut % 60} phút" if phut >= 60 else f"{phut} phút"
-            prompt += f"{i}. {t['task_name']} (Thời gian: {tg}, Ưu tiên: {t['priority']}, Loại: {t['task_type']})\n"
+            prompt += f"{i}. {t.get('task_name', '')} (Thời gian: {tg}, Ưu tiên: {t.get('priority', '')}, Loại: {t.get('task_type', '')})\n"
     else:
         for i, t in enumerate(tasks, 1):
             prompt += f"{i}. {t}\n"
