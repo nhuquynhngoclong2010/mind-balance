@@ -374,7 +374,7 @@ else:
     with st.sidebar:
         st.success(f"👋 Xin chào **{st.session_state.name}**")
         
-        if st.button("🚪 Đăng xuất", width="stretch"):
+        if st.button("🚪 Đăng xuất", use_container_width=True):
             logout()
         
         st.markdown("---")
@@ -384,7 +384,7 @@ else:
         st.page_link("pages/3_📚_Sổ_Tay_Cá_Nhân.py", label="📚 Playbook của tôi")
         
         st.markdown("---")
-        if st.button("🧠 Tại sao app hiệu quả?", width="stretch"):
+        if st.button("🧠 Tại sao app hiệu quả?", use_container_width=True):
             st.session_state.show_science = True
     
     # Header
@@ -399,15 +399,12 @@ else:
     df_week = get_week_data(st.session_state.username)
     df_playbook = get_all_playbook_rules(st.session_state.username)
 
-    # ── HIỂN THỊ FRAMEWORK SCIENCE ──────────────────────────────
-    # Chỉ dùng hàm nội bộ render_framework_science(), KHÔNG import file ngoài
     if st.session_state.get('show_science', False):
         render_framework_science()
         if st.button("✖️ Đóng", key="close_science"):
             st.session_state.show_science = False
             st.rerun()
         st.markdown("---")
-    # ────────────────────────────────────────────────────────────
 
     st.markdown("---")
     
@@ -439,13 +436,13 @@ else:
     st.subheader("🚀 Hành động nhanh")
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("📝 Check-in hôm nay", width="stretch", type="primary"):
+        if st.button("📝 Check-in hôm nay", use_container_width=True, type="primary"):
             st.switch_page("pages/1_📝_Nhập_Liệu_Hàng_Ngày.py")
     with col2:
-        if st.button("📊 Xem phân tích tuần", width="stretch"):
+        if st.button("📊 Xem phân tích tuần", use_container_width=True):
             st.switch_page("pages/2_📊_Tổng_Kết_Tuần.py")
     with col3:
-        if st.button("📚 Mở Playbook", width="stretch"):
+        if st.button("📚 Mở Playbook", use_container_width=True):
             st.switch_page("pages/3_📚_Sổ_Tay_Cá_Nhân.py")
     
     st.markdown("---")
@@ -469,7 +466,7 @@ else:
            - Test và verify
            - Tạo "sách hướng dẫn" cho chính mình
         """)
-        if st.button("🚀 Bắt đầu check-in đầu tiên", type="primary", width="stretch"):
+        if st.button("🚀 Bắt đầu check-in đầu tiên", type="primary", use_container_width=True):
             st.switch_page("pages/1_📝_Nhập_Liệu_Hàng_Ngày.py")
     else:
         tab1, tab2 = st.tabs(["📈 Xu hướng tuần này", "📚 Playbook gần đây"])
