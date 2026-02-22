@@ -1,6 +1,26 @@
 import json
 from datetime import datetime
 
+def _safe_int(val):
+    """Chuyển đổi an toàn sang int, xử lý None, string, float từ Supabase"""
+    try:
+        return int(float(val or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _parse_tasks(val):
+    """Parse tasks an toàn — xử lý cả list và string JSON"""
+    if isinstance(val, list):
+        return val
+    if isinstance(val, str):
+        try:
+            return json.loads(val)
+        except Exception:
+            return []
+    return []
+
+
 def build_weekly_prompt(df, patterns):
     """Tạo AI prompt từ data tuần"""
     
@@ -73,8 +93,8 @@ def build_daily_framework_prompt_with_schedule(date, data, framework_name):
     fixed_schedule = data.get('fixed_schedule', [])
     energy     = data.get('energy_level', 5)
 
-    # Tính tổng thời gian công việc — dùng "or 0" để tránh None từ Supabase
-    total_minutes = sum(int(t.get('estimated_time') or 0) for t in tasks_meta)
+    # Tính tổng thời gian — dùng _safe_int để xử lý mọi kiểu từ Supabase
+    total_minutes = sum(_safe_int(t.get('estimated_time')) for t in tasks_meta)
     total_h = total_minutes // 60
     total_m = total_minutes % 60
 
