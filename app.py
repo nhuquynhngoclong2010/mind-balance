@@ -415,7 +415,7 @@ else:
         st.metric("📅 Ngày đã theo dõi", f"{days_tracked}/7")
     with col2:
         if days_tracked > 0:
-            avg_energy = df_week['energy_level'].mean()
+            avg_energy = pd.to_numeric(df_week['energy_level'], errors='coerce').mean()
             st.metric("⚡ Năng lượng TB", f"{avg_energy:.1f}/10")
         else:
             st.metric("⚡ Năng lượng TB", "—")
@@ -426,7 +426,7 @@ else:
     with col4:
         if days_tracked > 0:
             import json
-            total_tasks = sum(df_week['tasks'].apply(lambda x: len(json.loads(x))))
+            total_tasks = sum(df_week['tasks'].apply(lambda x: len(json.loads(x) if isinstance(x, str) else x)))
             st.metric("📋 Tổng công việc", total_tasks)
         else:
             st.metric("📋 Tổng công việc", "—")

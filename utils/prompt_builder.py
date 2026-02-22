@@ -74,7 +74,7 @@ def build_daily_framework_prompt_with_schedule(date, data, framework_name):
     energy     = data.get('energy_level', 5)
 
     # Tính tổng thời gian công việc — dùng "or 0" để tránh None từ Supabase
-    total_minutes = sum((t.get('estimated_time') or 0) for t in tasks_meta)
+    total_minutes = sum(int(t.get('estimated_time') or 0) for t in tasks_meta)
     total_h = total_minutes // 60
     total_m = total_minutes % 60
 
