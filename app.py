@@ -396,7 +396,17 @@ else:
     </div>
     """, unsafe_allow_html=True)
     
-    df_week = get_week_data(st.session_state.username)
+    from utils.database import get_current_week_range
+import pandas as pd
+df_week_all = get_week_data(st.session_state.username)
+_week_start, _week_end = get_current_week_range()
+if len(df_week_all) > 0:
+    df_week = df_week_all[
+        (df_week_all['date'] >= _week_start) &
+        (df_week_all['date'] <= _week_end)
+    ].copy()
+else:
+    df_week = df_week_all.copy()
     df_playbook = get_all_playbook_rules(st.session_state.username)
 
     if st.session_state.get('show_science', False):
