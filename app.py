@@ -1,8 +1,9 @@
 import streamlit as st
 from utils.auth import login_form, check_authentication, logout
-from utils.database import init_database, get_week_data, get_all_playbook_rules
+from utils.database import init_database, get_week_data, get_all_playbook_rules, get_current_week_range
 from datetime import datetime
 import pandas as pd
+import json
 
 st.set_page_config(
     page_title="Mind Balance",
@@ -10,19 +11,15 @@ st.set_page_config(
     layout="wide"
 )
 
-# CSS SIÊU ĐẸP - FOX MASCOT + GRADIENT TRENDY
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap');
-    
     * { font-family: 'Quicksand', sans-serif; }
-    
     .stApp {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #667eea 100%);
         background-size: 400% 400%;
         animation: gradientShift 15s ease infinite;
     }
-    
     @keyframes gradientShift {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
@@ -40,7 +37,6 @@ st.markdown("""
         from { opacity: 0; }
         to { opacity: 1; }
     }
-    
     .main .block-container {
         background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(20px);
@@ -152,8 +148,6 @@ st.markdown("""
         border-radius: 8px;
     }
     .stMarkdown { color: white !important; }
-
-    /* ── FRAMEWORK SCIENCE SECTION ── */
     .fw-science-header { text-align: center; padding: 10px 0 20px 0; }
     .fw-science-badge {
         display: inline-block;
@@ -341,10 +335,10 @@ if not check_authentication():
         <div style="font-size: 8rem; display: inline-block; animation: bounce 2s ease-in-out infinite; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));">🦊</div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     st.markdown('<p class="big-title">🧠 Mind Balance</p>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">Hệ thống tư duy có cấu trúc</p>', unsafe_allow_html=True)
-    
+
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         login_form()
@@ -355,38 +349,38 @@ if not check_authentication():
             - ❌ App tạo prompt
             - ❌ Chatbot therapy
             - ❌ Mood tracker thông thường
-            
+
             **Mind Balance LÀ:**
             - ✅ Hệ thống thu thập data có cấu trúc
             - ✅ Phát hiện patterns tự động
             - ✅ **7 frameworks tư duy** dựa trên nghiên cứu tâm lý học
             - ✅ Xây dựng playbook cá nhân
             - ✅ Tạo AI prompt context-rich (optional)
-            
+
             **Kết quả:** Bạn tự học cách xử lý stress thông minh hơn!
-            
+
             👉 Mỗi ngày = 1 framework khác nhau từ GTD, Eisenhower, Ultradian Rhythm...
             """)
 
 else:
     init_database(st.session_state.username)
-    
+
     with st.sidebar:
         st.success(f"👋 Xin chào **{st.session_state.name}**")
-        
+
         if st.button("🚪 Đăng xuất", use_container_width=True):
             logout()
-        
+
         st.markdown("---")
         st.caption("📍 Điều hướng nhanh")
         st.page_link("pages/1_📝_Nhập_Liệu_Hàng_Ngày.py", label="📝 Check-in hôm nay")
         st.page_link("pages/2_📊_Tổng_Kết_Tuần.py", label="📊 Xem phân tích")
         st.page_link("pages/3_📚_Sổ_Tay_Cá_Nhân.py", label="📚 Playbook của tôi")
-        
+
         st.markdown("---")
         if st.button("🧠 Tại sao app hiệu quả?", use_container_width=True):
             st.session_state.show_science = True
-    
+
     # Header
     st.markdown(f"""
     <div style="text-align: center; margin-bottom: 2rem; animation: fadeInDown 0.8s ease;">
@@ -395,18 +389,18 @@ else:
         <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem; opacity: 0.9; color: white;">Hôm nay: {datetime.now().strftime('%A, %d/%m/%Y')}</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    from utils.database import get_current_week_range
-import pandas as pd
-df_week_all = get_week_data(st.session_state.username)
-_week_start, _week_end = get_current_week_range()
-if len(df_week_all) > 0:
-    df_week = df_week_all[
-        (df_week_all['date'] >= _week_start) &
-        (df_week_all['date'] <= _week_end)
-    ].copy()
-else:
-    df_week = df_week_all.copy()
+
+    # Lấy data tuần HIỆN TẠI
+    _week_start, _week_end = get_current_week_range()
+    df_week_all = get_week_data(st.session_state.username)
+    if len(df_week_all) > 0:
+        df_week = df_week_all[
+            (df_week_all['date'] >= _week_start) &
+            (df_week_all['date'] <= _week_end)
+        ].copy()
+    else:
+        df_week = df_week_all.copy()
+
     df_playbook = get_all_playbook_rules(st.session_state.username)
 
     if st.session_state.get('show_science', False):
@@ -417,7 +411,7 @@ else:
         st.markdown("---")
 
     st.markdown("---")
-    
+
     # KPIs
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -425,8 +419,7 @@ else:
         st.metric("📅 Ngày đã theo dõi", f"{days_tracked}/7")
     with col2:
         if days_tracked > 0:
-            import pandas as pd_local
-            avg_energy = pd_local.to_numeric(df_week['energy_level'], errors='coerce').mean()
+            avg_energy = pd.to_numeric(df_week['energy_level'], errors='coerce').mean()
             st.metric("⚡ Năng lượng TB", f"{avg_energy:.1f}/10")
         else:
             st.metric("⚡ Năng lượng TB", "—")
@@ -436,21 +429,20 @@ else:
         st.metric("📚 Playbook Rules", f"{verified_count} verified")
     with col4:
         if days_tracked > 0:
-            import json as _json
             def _count_tasks(x):
                 if isinstance(x, list):
                     return len(x)
                 try:
-                    return len(_json.loads(x))
+                    return len(json.loads(x))
                 except Exception:
                     return 0
             total_tasks = sum(df_week['tasks'].apply(_count_tasks))
             st.metric("📋 Tổng công việc", total_tasks)
         else:
             st.metric("📋 Tổng công việc", "—")
-    
+
     st.markdown("---")
-    
+
     st.subheader("🚀 Hành động nhanh")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -462,9 +454,9 @@ else:
     with col3:
         if st.button("📚 Mở Playbook", use_container_width=True):
             st.switch_page("pages/3_📚_Sổ_Tay_Cá_Nhân.py")
-    
+
     st.markdown("---")
-    
+
     if days_tracked == 0:
         st.info("👋 Chào mừng đến Mind Balance! Hãy bắt đầu với check-in đầu tiên.")
         st.markdown("### 🎯 Cách sử dụng:")
@@ -473,12 +465,12 @@ else:
            - Ghi lại trạng thái tinh thần, năng lượng
            - Liệt kê công việc hôm nay
            - Xem framework tư duy theo ngày
-        
+
         2. **📊 Xem phân tích sau 3+ ngày**
            - 3 biểu đồ tự động
            - Phát hiện patterns
            - Tạo AI prompt context-rich
-        
+
         3. **📚 Xây dựng Playbook**
            - Ghi lại quy luật từ kinh nghiệm
            - Test và verify
@@ -488,7 +480,7 @@ else:
             st.switch_page("pages/1_📝_Nhập_Liệu_Hàng_Ngày.py")
     else:
         tab1, tab2 = st.tabs(["📈 Xu hướng tuần này", "📚 Playbook gần đây"])
-        
+
         with tab1:
             if days_tracked >= 3:
                 from utils.charts import create_energy_trend
@@ -497,7 +489,7 @@ else:
                 st.info(f"Bạn đã check-in {days_tracked} ngày tuần này. {'✅ Tuyệt vời!' if days_tracked >= 6 else '💪 Hãy tiếp tục!'}")
             else:
                 st.warning(f"Cần ít nhất 3 ngày để hiển thị biểu đồ. Bạn đang có {days_tracked}/3 ngày.")
-        
+
         with tab2:
             if playbook_count == 0:
                 st.info("Bạn chưa có rule nào trong playbook. Hãy thêm rule đầu tiên sau khi phân tích tuần!")
@@ -510,8 +502,7 @@ else:
                     st.markdown("---")
                 if st.button("Xem tất cả rules →"):
                     st.switch_page("pages/3_📚_Sổ_Tay_Cá_Nhân.py")
-    
-    # Section 7 Frameworks
+
     st.markdown("---")
     render_framework_science()
 
