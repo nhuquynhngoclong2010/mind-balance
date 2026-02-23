@@ -9,12 +9,7 @@ import json
 import pandas as pd
 import streamlit.components.v1 as components
 
-st.set_page_config(
-    page_title="Tổng kết tuần",
-    page_icon="📊",
-    layout="wide"
-)
-
+st.set_page_config(page_title="Tổng kết tuần", page_icon="📊", layout="wide")
 apply_gradient_theme()
 
 if not check_authentication():
@@ -23,64 +18,61 @@ if not check_authentication():
 
 username = st.session_state.username
 init_database(username)
-
 show_fox_header("📊 Tổng kết tuần")
 
 week_start, week_end = get_current_week_range()
 st.markdown(f"**Tuần:** {week_start} đến {week_end}")
 
 # ================================================================
-# KIỂM TRA TUẦN MỚI — CHỈ HIỆN VÀO THỨ 2
+# BANNER LƯU TUẦN CŨ — chỉ hiện khi chưa lưu
 # ================================================================
 if is_new_week(username):
-    st.warning("🎉 ĐÃ HẾT TUẦN! Hãy lưu tuần trước.")
-
     last_monday = datetime.strptime(week_start, "%Y-%m-%d") - timedelta(days=7)
     last_sunday = last_monday + timedelta(days=6)
-    st.info(f"Tuần trước: {last_monday.strftime('%Y-%m-%d')} - {last_sunday.strftime('%Y-%m-%d')}")
 
-    # Kiểm tra đã lưu tuần trước chưa
-    history_df = get_weekly_history(username, 8)
-    already_saved = False
-    if len(history_df) > 0:
-        already_saved = last_monday.strftime('%Y-%m-%d') in history_df['week_start'].values
+    history_check = get_weekly_history(username, 8)
+    already_saved = (
+        len(history_check) > 0 and
+        last_monday.strftime('%Y-%m-%d') in history_check['week_start'].values
+    )
 
-    if already_saved:
-        st.success("✅ Đã lưu tuần trước rồi!")
-    else:
+    if not already_saved:
+        st.warning("🎉 ĐÃ HẾT TUẦN! Hãy lưu tuần trước.")
+        st.info(f"Tuần trước: {last_monday.strftime('%Y-%m-%d')} - {last_sunday.strftime('%Y-%m-%d')}")
+
         if st.button("📂 Lưu tuần cũ", type="primary", use_container_width=True):
-            # Lấy data tuần TRƯỚC (không phải tuần hiện tại)
-            df_all = get_week_data(username)
-            df_last = df_all[
-                (df_all['date'] >= last_monday.strftime('%Y-%m-%d')) &
-                (df_all['date'] <= last_sunday.strftime('%Y-%m-%d'))
-            ] if len(df_all) > 0 else df_all
-
+            df_temp = get_week_data(username)
+            if len(df_temp) > 0:
+                df_last = df_temp[
+                    (df_temp['date'] >= last_monday.strftime('%Y-%m-%d')) &
+                    (df_temp['date'] <= last_sunday.strftime('%Y-%m-%d'))
+                ]
+            else:
+                df_last = pd.DataFrame()
             save_weekly_history(
                 username,
                 last_monday.strftime('%Y-%m-%d'),
                 last_sunday.strftime('%Y-%m-%d'),
-                df_last if len(df_last) > 0 else pd.DataFrame()
+                df_last
             )
             st.success("✅ Đã lưu!")
             st.balloons()
             st.rerun()
 
-st.markdown("---")
+        st.markdown("---")
 
 # ================================================================
-# LẤY DATA TUẦN HIỆN TẠI (chỉ từ week_start đến week_end)
+# DATA TUẦN HIỆN TẠI — chỉ lấy ngày trong tuần này
 # ================================================================
 df_all = get_week_data(username)
 
 if len(df_all) > 0:
-    # Chuyển về numeric để so sánh date đúng
     df = df_all[
         (df_all['date'] >= week_start) &
         (df_all['date'] <= week_end)
     ].copy()
 else:
-    df = df_all.copy()
+    df = pd.DataFrame()
 
 days_tracked = len(df)
 
@@ -90,6 +82,23 @@ if days_tracked < 3:
     st.warning(f"⚠️ Cần 3 ngày để phân tích. Hiện có {days_tracked}/3 ngày.")
     if st.button("📝 Check-in ngay", type="primary"):
         st.switch_page("pages/1_📝_Nhập_Liệu_Hàng_Ngày.py")
+
+    # Vẫn hiện lịch sử ở cuối dù chưa đủ data
+    st.markdown("---")
+    st.subheader("📂 Lịch sử các tuần")
+    history_df = get_weekly_history(username, 8)
+    if len(history_df) > 0:
+        for idx, row in history_df.iterrows():
+            col_a, col_b, col_c = st.columns([2, 1, 1])
+            with col_a:
+                st.markdown(f"**{row['week_start']} - {row['week_end']}**")
+            with col_b:
+                st.metric("Check-in", f"{row['total_checkins']}/7")
+            with col_c:
+                st.metric("Năng lượng", f"{float(row['avg_energy']):.1f}/10")
+            st.markdown("---")
+    else:
+        st.info("Chưa có lịch sử tuần nào được lưu.")
     st.stop()
 
 st.success(f"✅ Đủ dữ liệu! ({days_tracked} ngày)")
@@ -123,44 +132,34 @@ st.markdown("---")
 
 # BIỂU ĐỒ
 st.subheader("📈 Biểu đồ phân tích tuần")
-
 chart_tab1, chart_tab2, chart_tab3 = st.tabs([
     "⚡ Xu hướng năng lượng",
     "📋 Công việc vs Năng lượng",
     "🎯 Ma trận áp lực"
 ])
-
 with chart_tab1:
-    fig1 = create_energy_trend(df)
-    st.plotly_chart(fig1, use_container_width=True)
-
+    st.plotly_chart(create_energy_trend(df), use_container_width=True)
 with chart_tab2:
-    fig2 = create_task_energy_comparison(df)
-    st.plotly_chart(fig2, use_container_width=True)
-
+    st.plotly_chart(create_task_energy_comparison(df), use_container_width=True)
 with chart_tab3:
-    fig3 = create_mood_matrix(df)
-    st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(create_mood_matrix(df), use_container_width=True)
 
 st.markdown("---")
 
 # PATTERNS
 st.subheader("⚠️ Patterns phát hiện")
-
 patterns = []
 worst_day = df.loc[df['energy_level'].idxmin()]
 if worst_day['energy_level'] < 5:
     patterns.append(f"⚠️ {worst_day['date']} là ngày thấp nhất ({worst_day['energy_level']}/10)")
-
 low_sleep = df[df['sleep_quality'] <= 2]
 if len(low_sleep) > 0:
     patterns.append(f"😴 {len(low_sleep)} ngày ngủ kém → Ảnh hưởng năng lượng")
-
 high_tasks = df[df['task_count'] >= 8]
 if len(high_tasks) > 0:
     patterns.append(f"📋 {len(high_tasks)} ngày quá nhiều việc (≥8 việc)")
 
-if len(patterns) > 0:
+if patterns:
     for p in patterns:
         st.markdown(f"- {p}")
 else:
@@ -184,7 +183,6 @@ with col_p1:
     if st.button(btn_label, use_container_width=True, type="primary", key="btn_weekly_toggle"):
         st.session_state.show_weekly_prompt = not st.session_state.show_weekly_prompt
         st.rerun()
-
 with col_p2:
     prompt_json = json.dumps(weekly_prompt)
     components.html(f"""
@@ -214,7 +212,6 @@ st.markdown("---")
 
 # GHI CHÚ
 st.subheader("📝 Ghi chú cải thiện")
-
 with st.expander("Lưu lời khuyên cho tuần sau"):
     with st.form("weekly_note"):
         note_content = st.text_area(
@@ -223,7 +220,6 @@ with st.expander("Lưu lời khuyên cho tuần sau"):
             placeholder="VD: Nên ngủ đủ 7 tiếng, giảm công việc xuống 5-6 việc/ngày..."
         )
         note_type = st.radio("Áp dụng:", ["Tuần sau", "Dài hạn", "Quy luật"], horizontal=True)
-        
         if st.form_submit_button("💾 Lưu", use_container_width=True):
             if note_content.strip():
                 next_week = (datetime.strptime(week_start, "%Y-%m-%d") + timedelta(days=7)).strftime("%Y-%m-%d")
@@ -248,7 +244,7 @@ if len(history_df) > 0:
         with col_b:
             st.metric("Check-in", f"{row['total_checkins']}/7")
         with col_c:
-            st.metric("Năng lượng", f"{row['avg_energy']:.1f}/10")
+            st.metric("Năng lượng", f"{float(row['avg_energy']):.1f}/10")
         st.markdown("---")
 else:
     st.info("Chưa có lịch sử tuần nào được lưu.")
