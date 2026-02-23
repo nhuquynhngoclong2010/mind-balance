@@ -1,10 +1,30 @@
 import plotly.graph_objects as go
+import pandas as pd
 import json
 
+
+def _parse_tasks(x):
+    """Parse tasks an toàn — xử lý cả list và string JSON từ Supabase"""
+    if isinstance(x, list):
+        return len(x)
+    try:
+        return len(json.loads(x))
+    except Exception:
+        return 0
+
+
+def _safe_numeric(series):
+    """Convert series sang numeric an toàn"""
+    return pd.to_numeric(series, errors='coerce').fillna(0)
+
+
 def create_energy_trend(df):
-    """Biểu đồ xu hướng năng lượng với con cáo"""
+    """Biểu đồ xu hướng năng lượng"""
+    df = df.copy()
+    df['energy_level'] = _safe_numeric(df['energy_level'])
+
     fig = go.Figure()
-    
+
     fig.add_trace(go.Scatter(
         x=df['date'],
         y=df['energy_level'],
@@ -25,7 +45,7 @@ def create_energy_trend(df):
         fillcolor='rgba(255, 140, 66, 0.15)',
         hovertemplate='<b>%{x}</b><br>Năng lượng: %{y}/10<extra></extra>'
     ))
-    
+
     fig.update_layout(
         title={
             'text': '🦊 Xu hướng năng lượng trong tuần',
@@ -53,15 +73,18 @@ def create_energy_trend(df):
         font=dict(color='white', family='Quicksand, sans-serif', size=14, weight=600),
         hovermode='x unified'
     )
-    
+
     return fig
+
 
 def create_task_energy_comparison(df):
     """So sánh số công việc vs năng lượng"""
-    df['task_count'] = df['tasks'].apply(lambda x: len(json.loads(x)))
-    
+    df = df.copy()
+    df['energy_level'] = _safe_numeric(df['energy_level'])
+    df['task_count'] = df['tasks'].apply(_parse_tasks)
+
     fig = go.Figure()
-    
+
     fig.add_trace(go.Bar(
         x=df['date'],
         y=df['task_count'],
@@ -75,7 +98,7 @@ def create_task_energy_comparison(df):
         textfont=dict(size=14, weight=600, color='white'),
         hovertemplate='<b>%{x}</b><br>Công việc: %{y}<extra></extra>'
     ))
-    
+
     fig.add_trace(go.Scatter(
         x=df['date'],
         y=df['energy_level'],
@@ -86,7 +109,7 @@ def create_task_energy_comparison(df):
         marker=dict(size=30, color='#FF8C42', line=dict(color='white', width=3)),
         hovertemplate='<b>%{x}</b><br>Năng lượng: %{y}/10<extra></extra>'
     ))
-    
+
     fig.update_layout(
         title={
             'text': '📋🦊 Công việc vs Năng lượng',
@@ -129,32 +152,35 @@ def create_task_energy_comparison(df):
             font=dict(color='white', size=14, weight=600)
         )
     )
-    
+
     return fig
+
 
 def create_mood_matrix(df):
     """Ma trận tâm trạng - Áp lực vs Năng lượng"""
+    df = df.copy()
+    df['energy_level'] = _safe_numeric(df['energy_level'])
+
     mental_load_map = {
         'Nhẹ nhàng': 1,
         'Bình thường': 2,
         'Nặng': 3,
         'Cực nặng': 4
     }
-    
-    df['mental_load_numeric'] = df['mental_load'].map(mental_load_map)
-    
-    fig = go.Figure()
-    
-    # Tạo màu cho từng điểm dựa trên năng lượng
+
+    df['mental_load_numeric'] = df['mental_load'].map(mental_load_map).fillna(2)
+
     colors = []
     for energy in df['energy_level']:
         if energy <= 3:
-            colors.append('#f5576c')  # Đỏ - năng lượng thấp
+            colors.append('#f5576c')
         elif energy <= 6:
-            colors.append('#f093fb')  # Hồng - năng lượng trung bình
+            colors.append('#f093fb')
         else:
-            colors.append('#FF8C42')  # Cam - năng lượng cao
-    
+            colors.append('#FF8C42')
+
+    fig = go.Figure()
+
     fig.add_trace(go.Scatter(
         x=df['mental_load_numeric'],
         y=df['energy_level'],
@@ -167,7 +193,7 @@ def create_mood_matrix(df):
         hovertext=df['date'],
         hovertemplate='<b>%{hovertext}</b><br>Áp lực: %{x}<br>Năng lượng: %{y}/10<extra></extra>'
     ))
-    
+
     fig.update_layout(
         title={
             'text': '🎯🦊 Ma trận Áp lực vs Năng lượng',
@@ -198,5 +224,5 @@ def create_mood_matrix(df):
         font=dict(color='white', family='Quicksand, sans-serif', size=14, weight=600),
         hovermode='closest'
     )
-    
+
     return fig
