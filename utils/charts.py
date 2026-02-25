@@ -36,7 +36,7 @@ def create_energy_trend(df):
             shape='spline'
         ),
         marker=dict(
-            size=40,
+            size=16,
             color='rgba(255, 140, 66, 1)',
             line=dict(color='white', width=3),
             symbol='circle'
@@ -51,27 +51,28 @@ def create_energy_trend(df):
             'text': '🦊 Xu hướng năng lượng trong tuần',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 24, 'family': 'Poppins, sans-serif', 'color': 'white', 'weight': 700}
+            'font': {'size': 22, 'family': 'Poppins, sans-serif', 'color': 'white'}
         },
         xaxis=dict(
-            title=dict(text='Ngày', font=dict(size=16, weight=600)),
-            tickfont=dict(size=14, weight=600, color='white'),
+            title=dict(text='Ngày', font=dict(size=14)),
+            tickfont=dict(size=13, color='white'),
             showgrid=True,
             gridcolor='rgba(255,255,255,0.2)',
             color='white'
         ),
         yaxis=dict(
-            title=dict(text='Mức năng lượng', font=dict(size=16, weight=600)),
+            title=dict(text='Mức năng lượng', font=dict(size=14)),
             range=[0, 11],
-            tickfont=dict(size=14, weight=600, color='white'),
+            tickfont=dict(size=13, color='white'),
             showgrid=True,
             gridcolor='rgba(255,255,255,0.2)',
             color='white'
         ),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='white', family='Quicksand, sans-serif', size=14, weight=600),
-        hovermode='x unified'
+        font=dict(color='white', family='Quicksand, sans-serif', size=13),
+        hovermode='x unified',
+        margin=dict(t=60, b=40, l=40, r=40)
     )
 
     return fig
@@ -95,7 +96,7 @@ def create_task_energy_comparison(df):
         ),
         text=df['task_count'],
         textposition='outside',
-        textfont=dict(size=14, weight=600, color='white'),
+        textfont=dict(size=13, color='white'),
         hovertemplate='<b>%{x}</b><br>Công việc: %{y}<extra></extra>'
     ))
 
@@ -106,7 +107,7 @@ def create_task_energy_comparison(df):
         mode='lines+markers',
         yaxis='y2',
         line=dict(color='#FF8C42', width=4, shape='spline'),
-        marker=dict(size=30, color='#FF8C42', line=dict(color='white', width=3)),
+        marker=dict(size=12, color='#FF8C42', line=dict(color='white', width=3)),
         hovertemplate='<b>%{x}</b><br>Năng lượng: %{y}/10<extra></extra>'
     ))
 
@@ -115,25 +116,25 @@ def create_task_energy_comparison(df):
             'text': '📋🦊 Công việc vs Năng lượng',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 24, 'family': 'Poppins, sans-serif', 'color': 'white', 'weight': 700}
+            'font': {'size': 22, 'family': 'Poppins, sans-serif', 'color': 'white'}
         },
         xaxis=dict(
-            title=dict(text='Ngày', font=dict(size=16, weight=600)),
-            tickfont=dict(size=14, weight=600, color='white'),
+            title=dict(text='Ngày', font=dict(size=14)),
+            tickfont=dict(size=13, color='white'),
             showgrid=True,
             gridcolor='rgba(255,255,255,0.2)',
             color='white'
         ),
         yaxis=dict(
-            title=dict(text='Số công việc', font=dict(size=16, weight=600)),
-            tickfont=dict(size=14, weight=600, color='white'),
+            title=dict(text='Số công việc', font=dict(size=14)),
+            tickfont=dict(size=13, color='white'),
             showgrid=True,
             gridcolor='rgba(255,255,255,0.2)',
             color='white'
         ),
         yaxis2=dict(
-            title=dict(text='Mức năng lượng', font=dict(size=16, weight=600)),
-            tickfont=dict(size=14, weight=600, color='white'),
+            title=dict(text='Mức năng lượng', font=dict(size=14)),
+            tickfont=dict(size=13, color='white'),
             overlaying='y',
             side='right',
             range=[0, 11],
@@ -142,15 +143,16 @@ def create_task_energy_comparison(df):
         ),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='white', family='Quicksand, sans-serif', size=14, weight=600),
+        font=dict(color='white', family='Quicksand, sans-serif', size=13),
         barmode='group',
         hovermode='x unified',
         legend=dict(
             bgcolor='rgba(255,255,255,0.15)',
             bordercolor='rgba(255,255,255,0.4)',
             borderwidth=2,
-            font=dict(color='white', size=14, weight=600)
-        )
+            font=dict(color='white', size=13)
+        ),
+        margin=dict(t=60, b=40, l=40, r=60)
     )
 
     return fig
@@ -184,9 +186,12 @@ def create_mood_matrix(df):
     fig.add_trace(go.Scatter(
         x=df['mental_load_numeric'],
         y=df['energy_level'],
-        mode='markers',
+        mode='markers+text',
+        text=df['date'],
+        textposition='top center',
+        textfont=dict(color='white', size=11),
         marker=dict(
-            size=40,
+            size=20,
             color=colors,
             line=dict(color='white', width=3)
         ),
@@ -199,30 +204,32 @@ def create_mood_matrix(df):
             'text': '🎯🦊 Ma trận Áp lực vs Năng lượng',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 24, 'family': 'Poppins, sans-serif', 'color': 'white', 'weight': 700}
+            'font': {'size': 22, 'family': 'Poppins, sans-serif', 'color': 'white'}
         },
         xaxis=dict(
-            title=dict(text='Mức độ áp lực tinh thần', font=dict(size=16, weight=600)),
+            title=dict(text='Mức độ áp lực tinh thần', font=dict(size=14)),
             tickmode='array',
             tickvals=[1, 2, 3, 4],
             ticktext=['Nhẹ nhàng', 'Bình thường', 'Nặng', 'Cực nặng'],
-            tickfont=dict(size=14, weight=600),
+            tickfont=dict(size=13, color='white'),
             showgrid=True,
             gridcolor='rgba(255,255,255,0.2)',
-            color='white'
+            color='white',
+            range=[0.5, 4.5]
         ),
         yaxis=dict(
-            title=dict(text='Mức năng lượng', font=dict(size=16, weight=600)),
+            title=dict(text='Mức năng lượng', font=dict(size=14)),
             range=[0, 11],
-            tickfont=dict(size=14, weight=600),
+            tickfont=dict(size=13, color='white'),
             showgrid=True,
             gridcolor='rgba(255,255,255,0.2)',
             color='white'
         ),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='white', family='Quicksand, sans-serif', size=14, weight=600),
-        hovermode='closest'
+        font=dict(color='white', family='Quicksand, sans-serif', size=13),
+        hovermode='closest',
+        margin=dict(t=60, b=40, l=40, r=40)
     )
 
     return fig
