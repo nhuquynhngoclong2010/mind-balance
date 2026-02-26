@@ -57,7 +57,14 @@ Tôi đã theo dõi trạng thái tinh thần và năng lượng trong {len(df)}
 """
     
     for _, row in df.iterrows():
-        tasks = json.loads(row['tasks'])
+        raw = row['tasks']
+        if isinstance(raw, list):
+            tasks = raw
+        else:
+            try:
+                tasks = json.loads(str(raw)) if raw and str(raw).strip() not in ('', 'None', 'null') else []
+            except:
+                tasks = []
         prompt += f"""
 ### {row['date']}
 - Trạng thái tinh thần: {row['mental_load']}

@@ -85,6 +85,13 @@ if days_tracked < 3:
 
 st.success(f"✅ Đủ dữ liệu! ({days_tracked} ngày)")
 
+# DEBUG - xóa sau khi fix xong
+with st.expander("🔍 Debug: Raw data"):
+    st.write("Columns:", df.columns.tolist())
+    st.write("energy_level values:", df['energy_level'].tolist())
+    st.write("tasks values:", df['tasks'].tolist())
+    st.dataframe(df[['date','energy_level','tasks','mental_load']].head())
+
 # METRICS
 df = df.reset_index(drop=True)
 df['energy_level'] = pd.to_numeric(df['energy_level'], errors='coerce')
