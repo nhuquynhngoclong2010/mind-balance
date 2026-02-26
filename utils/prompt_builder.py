@@ -1,3 +1,4 @@
+import pandas as pd
 import json
 from datetime import datetime
 
@@ -27,12 +28,20 @@ def build_weekly_prompt(df, patterns):
     if len(df) == 0:
         return "Chưa có dữ liệu để tạo prompt"
     
-    avg_energy = df['energy_level'].mean()
-    df['task_count'] = df['tasks'].apply(lambda x: len(json.loads(x)))
+    df['energy_level'] = pd.to_numeric(df['energy_level'], errors='coerce').fillna(0)
+    avg_energy = df['energy_level'].replace(0, float('nan')).mean()
+    def _safe_parse_tasks(x):
+        if isinstance(x, list): return len(x)
+        if not x or str(x).strip() in ('', 'None', 'null'): return 0
+        try: return len(json.loads(x))
+        except: return 0
+    df = df.copy()
+    df['task_count'] = df['tasks'].apply(_safe_parse_tasks)
     avg_tasks = df['task_count'].mean()
     
-    worst_day = df.loc[df['energy_level'].idxmin()]
-    best_day = df.loc[df['energy_level'].idxmax()]
+    df = df.reset_index(drop=True)
+    worst_day = df.loc[df['energy_level'].idxmin()] if df['energy_level'].max() > 0 else df.iloc[0]
+    best_day = df.loc[df['energy_level'].idxmax()] if df['energy_level'].max() > 0 else df.iloc[0]
     
     prompt = f"""# BỐI CẢNH TUẦN VỪA QUA
 

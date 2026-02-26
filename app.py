@@ -411,8 +411,12 @@ else:
         st.metric("📅 Ngày đã theo dõi", f"{days_tracked}/7")
     with col2:
         if days_tracked > 0:
-            avg_energy = pd.to_numeric(df_week['energy_level'], errors='coerce').fillna(0).replace(0, float('nan')).mean()
-            st.metric("⚡ Năng lượng TB", f"{avg_energy:.1f}/10")
+            energy_series = pd.to_numeric(df_week['energy_level'], errors='coerce')
+            avg_energy = energy_series.mean()
+            if pd.isna(avg_energy):
+                st.metric("⚡ Năng lượng TB", "—/10")
+            else:
+                st.metric("⚡ Năng lượng TB", f"{avg_energy:.1f}/10")
         else:
             st.metric("⚡ Năng lượng TB", "—")
     with col3:

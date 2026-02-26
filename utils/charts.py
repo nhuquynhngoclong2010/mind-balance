@@ -7,8 +7,10 @@ def _parse_tasks(x):
     """Parse tasks an toàn — xử lý cả list và string JSON từ Supabase"""
     if isinstance(x, list):
         return len(x)
+    if not x or str(x).strip() in ('', 'None', 'null'):
+        return 0
     try:
-        return len(json.loads(x))
+        return len(json.loads(str(x)))
     except Exception:
         return 0
 
@@ -21,8 +23,12 @@ def _safe_numeric(series):
 def create_energy_trend(df):
     """Biểu đồ xu hướng năng lượng"""
     df = df.copy()
+    df = df[df['date'].astype(str).str.len() == 10].reset_index(drop=True)
+    if len(df) == 0:
+        return go.Figure()
     df['energy_level'] = _safe_numeric(df['energy_level'])
 
+    df['date'] = df['date'].astype(str)
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
@@ -81,9 +87,13 @@ def create_energy_trend(df):
 def create_task_energy_comparison(df):
     """So sánh số công việc vs năng lượng"""
     df = df.copy()
+    df = df[df['date'].astype(str).str.len() == 10].reset_index(drop=True)
+    if len(df) == 0:
+        return go.Figure()
     df['energy_level'] = _safe_numeric(df['energy_level'])
     df['task_count'] = df['tasks'].apply(_parse_tasks)
 
+    df['date'] = df['date'].astype(str)
     fig = go.Figure()
 
     fig.add_trace(go.Bar(
@@ -161,6 +171,9 @@ def create_task_energy_comparison(df):
 def create_mood_matrix(df):
     """Ma trận tâm trạng - Áp lực vs Năng lượng"""
     df = df.copy()
+    df = df[df['date'].astype(str).str.len() == 10].reset_index(drop=True)
+    if len(df) == 0:
+        return go.Figure()
     df['energy_level'] = _safe_numeric(df['energy_level'])
 
     mental_load_map = {

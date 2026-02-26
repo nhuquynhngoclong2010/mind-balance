@@ -87,9 +87,9 @@ st.success(f"✅ Đủ dữ liệu! ({days_tracked} ngày)")
 
 # METRICS
 df = df.reset_index(drop=True)
-df['energy_level'] = pd.to_numeric(df['energy_level'], errors='coerce').fillna(0)
-df['sleep_quality'] = pd.to_numeric(df['sleep_quality'], errors='coerce').fillna(0)
-avg_energy = df['energy_level'].replace(0, float('nan')).mean()
+df['energy_level'] = pd.to_numeric(df['energy_level'], errors='coerce')
+df['sleep_quality'] = pd.to_numeric(df['sleep_quality'], errors='coerce')
+avg_energy = df['energy_level'].mean()  # mean() tự bỏ NaN
 
 def _parse_tasks(x):
     if isinstance(x, list):
@@ -108,8 +108,9 @@ with col1:
 with col2:
     st.metric("Công việc TB", f"{avg_tasks:.1f} việc/ngày")
 with col3:
-    if df['energy_level'].max() > 0:
-        best_day = df.loc[df['energy_level'].idxmax()]
+    df_valid = df.dropna(subset=['energy_level'])
+    if len(df_valid) > 0:
+        best_day = df_valid.loc[df_valid['energy_level'].idxmax()]
         st.metric("Ngày tốt nhất", best_day['date'])
     else:
         st.metric("Ngày tốt nhất", "—")
@@ -135,9 +136,11 @@ st.markdown("---")
 # PATTERNS
 st.subheader("⚠️ Quy luật phát hiện")
 patterns = []
-worst_day = df.loc[df['energy_level'].idxmin()]
-if worst_day['energy_level'] < 5:
-    patterns.append(f"⚠️ {worst_day['date']} là ngày thấp nhất ({worst_day['energy_level']}/10)")
+df_valid2 = df.dropna(subset=['energy_level'])
+if len(df_valid2) > 0:
+    worst_day = df_valid2.loc[df_valid2['energy_level'].idxmin()]
+    if worst_day['energy_level'] < 5:
+        patterns.append(f"⚠️ {worst_day['date']} là ngày thấp nhất ({worst_day['energy_level']}/10)")
 low_sleep = df[df['sleep_quality'] <= 2]
 if len(low_sleep) > 0:
     patterns.append(f"😴 {len(low_sleep)} ngày ngủ kém → Ảnh hưởng năng lượng")
