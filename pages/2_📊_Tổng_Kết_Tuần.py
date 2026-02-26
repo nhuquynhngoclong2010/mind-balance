@@ -41,19 +41,11 @@ if is_new_week(username):
         st.info(f"Tuần trước: {last_monday.strftime('%Y-%m-%d')} - {last_sunday.strftime('%Y-%m-%d')}")
 
         if st.button("📂 Lưu tuần cũ", type="primary", use_container_width=True):
-            df_temp = get_week_data(username)
-            if len(df_temp) > 0:
-                df_last = df_temp[
-                    (df_temp['date'] >= last_monday.strftime('%Y-%m-%d')) &
-                    (df_temp['date'] <= last_sunday.strftime('%Y-%m-%d'))
-                ]
-            else:
-                df_last = pd.DataFrame()
             save_weekly_history(
                 username,
                 last_monday.strftime('%Y-%m-%d'),
                 last_sunday.strftime('%Y-%m-%d'),
-                df_last
+                pd.DataFrame()
             )
             st.success("✅ Đã lưu!")
             st.balloons()
@@ -62,18 +54,9 @@ if is_new_week(username):
         st.markdown("---")
 
 # ================================================================
-# DATA TUẦN HIỆN TẠI — chỉ lấy ngày trong tuần này
+# DATA TUẦN HIỆN TẠI — get_week_data đã filter theo tuần rồi
 # ================================================================
-df_all = get_week_data(username)
-
-if len(df_all) > 0:
-    df = df_all[
-        (df_all['date'] >= week_start) &
-        (df_all['date'] <= week_end)
-    ].copy()
-else:
-    df = pd.DataFrame()
-
+df = get_week_data(username)
 days_tracked = len(df)
 
 st.markdown(f"### Check-in: **{days_tracked}/7 ngày** {'✅' if days_tracked >= 6 else '💪'}")
@@ -83,7 +66,6 @@ if days_tracked < 3:
     if st.button("📝 Check-in ngay", type="primary"):
         st.switch_page("pages/1_📝_Nhập_Liệu_Hàng_Ngày.py")
 
-    # Vẫn hiện lịch sử ở cuối dù chưa đủ data
     st.markdown("---")
     st.subheader("📂 Lịch sử các tuần")
     history_df = get_weekly_history(username, 8)
@@ -147,7 +129,7 @@ with chart_tab3:
 st.markdown("---")
 
 # PATTERNS
-st.subheader("⚠️ Patterns phát hiện")
+st.subheader("⚠️ Quy luật phát hiện")
 patterns = []
 worst_day = df.loc[df['energy_level'].idxmin()]
 if worst_day['energy_level'] < 5:
@@ -163,7 +145,7 @@ if patterns:
     for p in patterns:
         st.markdown(f"- {p}")
 else:
-    st.info("✅ Không có patterns tiêu cực!")
+    st.info("✅ Không có quy luật tiêu cực!")
 
 st.markdown("---")
 

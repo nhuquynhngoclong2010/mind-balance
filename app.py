@@ -390,16 +390,8 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-    # Lấy data tuần HIỆN TẠI
-    _week_start, _week_end = get_current_week_range()
-    df_week_all = get_week_data(st.session_state.username)
-    if len(df_week_all) > 0:
-        df_week = df_week_all[
-            (df_week_all['date'] >= _week_start) &
-            (df_week_all['date'] <= _week_end)
-        ].copy()
-    else:
-        df_week = df_week_all.copy()
+    # Lấy data tuần HIỆN TẠI — get_week_data đã filter theo tuần rồi
+    df_week = get_week_data(st.session_state.username)
 
     df_playbook = get_all_playbook_rules(st.session_state.username)
 
