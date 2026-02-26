@@ -86,9 +86,10 @@ if days_tracked < 3:
 st.success(f"✅ Đủ dữ liệu! ({days_tracked} ngày)")
 
 # METRICS
-df['energy_level'] = pd.to_numeric(df['energy_level'], errors='coerce')
-df['sleep_quality'] = pd.to_numeric(df['sleep_quality'], errors='coerce')
-avg_energy = df['energy_level'].mean()
+df = df.reset_index(drop=True)
+df['energy_level'] = pd.to_numeric(df['energy_level'], errors='coerce').fillna(0)
+df['sleep_quality'] = pd.to_numeric(df['sleep_quality'], errors='coerce').fillna(0)
+avg_energy = df['energy_level'].replace(0, float('nan')).mean()
 
 def _parse_tasks(x):
     if isinstance(x, list):
@@ -107,8 +108,11 @@ with col1:
 with col2:
     st.metric("Công việc TB", f"{avg_tasks:.1f} việc/ngày")
 with col3:
-    best_day = df.loc[df['energy_level'].idxmax()]
-    st.metric("Ngày tốt nhất", best_day['date'])
+    if df['energy_level'].max() > 0:
+        best_day = df.loc[df['energy_level'].idxmax()]
+        st.metric("Ngày tốt nhất", best_day['date'])
+    else:
+        st.metric("Ngày tốt nhất", "—")
 
 st.markdown("---")
 

@@ -305,7 +305,10 @@ Phương pháp hôm nay: **{framework['name']}**
     prompt += f"## 3. CÔNG VIỆC CẦN LÀM (Tổng: {total_h} giờ {total_m} phút)\n"
     if tasks_meta:
         for i, t in enumerate(tasks_meta, 1):
-            phut = int(float(t.get("estimated_time") or 0))
+            try:
+                phut = int(float(t.get("estimated_time") or 0))
+            except (TypeError, ValueError):
+                phut = 0
             tg = f"{phut // 60} giờ {phut % 60} phút" if phut >= 60 else f"{phut} phút"
             prompt += f"{i}. {t.get('task_name', '')} (Thời gian: {tg}, Ưu tiên: {t.get('priority', '')}, Loại: {t.get('task_type', '')})\n"
     else:

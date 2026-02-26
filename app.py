@@ -411,7 +411,7 @@ else:
         st.metric("📅 Ngày đã theo dõi", f"{days_tracked}/7")
     with col2:
         if days_tracked > 0:
-            avg_energy = pd.to_numeric(df_week['energy_level'], errors='coerce').mean()
+            avg_energy = pd.to_numeric(df_week['energy_level'], errors='coerce').fillna(0).replace(0, float('nan')).mean()
             st.metric("⚡ Năng lượng TB", f"{avg_energy:.1f}/10")
         else:
             st.metric("⚡ Năng lượng TB", "—")
@@ -500,3 +500,4 @@ else:
 
     st.markdown("---")
     st.caption("💡 Tip: Check-in đều đặn mỗi ngày để phát hiện patterns chính xác hơn!")
+    
