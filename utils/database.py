@@ -14,6 +14,18 @@ def get_connection():
         cursor_factory=psycopg2.extras.RealDictCursor
     )
 
+def _query_to_df(conn, query, params=()):
+    """Helper: chạy query và trả về DataFrame đúng cách với psycopg2"""
+    cur = conn.cursor()
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    cols = [desc[0] for desc in cur.description]
+    cur.close()
+    if rows:
+        return pd.DataFrame(rows, columns=cols)
+    return pd.DataFrame(columns=cols)
+
+
 def init_database(username):
     """Khởi tạo database với tất cả bảng cần thiết"""
     conn = get_connection()
@@ -183,7 +195,7 @@ def get_week_data(username):
         AND date <= %s
         ORDER BY date ASC
     """
-    df = pd.read_sql_query(query, conn, params=(username, week_start, week_end))
+    df = _query_to_df(conn, query, (username, week_start, week_end))
     conn.close()
     return df
 
@@ -225,7 +237,7 @@ def get_task_metadata(username, date):
         WHERE username = %s AND checkin_date = %s
         ORDER BY id
     """
-    df = pd.read_sql_query(query, conn, params=(username, date))
+    df = _query_to_df(conn, query, (username, date))
     conn.close()
     return df
 
@@ -266,7 +278,7 @@ def get_fixed_schedule(username, date):
         WHERE username = %s AND checkin_date = %s
         ORDER BY start_time
     """
-    df = pd.read_sql_query(query, conn, params=(username, date))
+    df = _query_to_df(conn, query, (username, date))
     conn.close()
     return df
 
@@ -325,7 +337,7 @@ def get_weekly_history(username, limit=8):
         ORDER BY created_at DESC 
         LIMIT %s
     """
-    df = pd.read_sql_query(query, conn, params=(username, limit))
+    df = _query_to_df(conn, query, (username, limit))
     conn.close()
     return df
 
@@ -381,14 +393,14 @@ def get_improvement_notes(username, week_start=None):
             WHERE username = %s AND week_start = %s
             ORDER BY created_at DESC
         """
-        df = pd.read_sql_query(query, conn, params=(username, week_start))
+        df = _query_to_df(conn, query, (username, week_start))
     else:
         query = """
             SELECT * FROM improvement_notes 
             WHERE username = %s
             ORDER BY created_at DESC
         """
-        df = pd.read_sql_query(query, conn, params=(username,))
+        df = _query_to_df(conn, query, (username,))
     conn.close()
     return df
 
@@ -465,7 +477,7 @@ def get_all_playbook_rules(username):
         WHERE username = %s
         ORDER BY created_at DESC
     """
-    df = pd.read_sql_query(query, conn, params=(username,))
+    df = _query_to_df(conn, query, (username,))
     conn.close()
     return df
 

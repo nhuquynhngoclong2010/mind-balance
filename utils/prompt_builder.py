@@ -70,7 +70,7 @@ Tôi đã theo dõi trạng thái tinh thần và năng lượng trong {len(df)}
 - Trạng thái tinh thần: {row['mental_load']}
 - Năng lượng: {row['energy_level']}/10
 - Nguồn áp lực: {row['pressure_source']}
-- Giấc ngủ: {'⭐' * row['sleep_quality']}
+- Giấc ngủ: {'⭐' * int(float(row['sleep_quality'] or 0))}
 - Số công việc: {len(tasks)} việc
 - Cảm giác khi nhìn danh sách: {row['task_feeling']}
 """
